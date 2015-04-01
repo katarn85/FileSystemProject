@@ -2,5 +2,6 @@
 
 int main()
 {
+	EraseAllSectors();
 	return 0;
 }
