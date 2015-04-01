@@ -18,7 +18,7 @@ void EraseAllSectors()
 		nFileSizeBytes/20,
 		0xFF);
 
-	for(int sect = 0, sect < 20, sect++)
+	for(int sect = 0; sect < 20; sect++)
 	{
 		WriteFile( memory,
 			freshMemorySector,
@@ -44,7 +44,7 @@ void EraseSector(int nSectorNr)
 
 	FillMemory(freshMemorySector,
 		nFileSizeBytes/20,
-		0xFF);}
+		0xFF);
 
 }
 
@@ -54,7 +54,7 @@ void ReadWord(int nAddress)
 			GENERIC_WRITE,
 			0,
 			OPEN_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL);}
+			FILE_ATTRIBUTE_NORMAL);
 
 }
 
@@ -64,6 +64,6 @@ void WriteWord(int nAddress, int nWord)
 			GENERIC_WRITE,
 			0,
 			OPEN_ALWAYS,
-			FILE_ATTRIBUTE_NORMAL);}
+			FILE_ATTRIBUTE_NORMAL);
 
 }

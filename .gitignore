@@ -180,6 +180,12 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
+# Build batch file
+*.bat
+
+# Build Directory
+build/
+
 # Mac crap
 .DS_Store
 
