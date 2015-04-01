@@ -1,54 +1,69 @@
-#include <stdio.h>
+#include <windows.h>
+
+#define nFileSizeBytes 1310720
 
 void EraseAllSectors()
 {
-	FILE* memory;
-	
-	// Attempt to open file, test for null return.
-	// If null, create file then open as r+.
-	if(!(memory = fopen("memory.dat", "r+")))
+	HANDLE memory = CreateFile( "memory.dat",
+				(GENERIC_READ | GENERIC_WRITE),
+				0,
+				OPEN_ALWAYS,
+				FILE_ATTRIBUTE_NORMAL);
+
+	LPVOID freshMemorySector = HeapAlloc(GetProcessHeap(),
+					HEAP_GENERATE_EXCEPTIONS,
+					nFileSizeBytes/20);
+
+	FillMemory(freshMemorySector,
+		nFileSizeBytes/20,
+		0xFF);
+
+	for(int sect = 0, sect < 20, sect++)
 	{
-		memory = fopen("memory.dat", "w");
-		fclose(memory);
-		memory = fopen("memory.dat", "r+");
+		WriteFile( memory,
+			freshMemorySector,
+			nFileSizeBytes/20);
 	}
+
+	HeapFree(GetProcessHeap(),
+		0,
+		freshMemorySector);
 }
 
 void EraseSector(int nSectorNr)
 {
-	FILE* memory;
+	HANDLE memory = CreateFile( "memory.dat",
+				GENERIC_WRITE,
+				0,
+				OPEN_ALWAYS,
+				FILE_ATTRIBUTE_NORMAL);
 
-	if(!(memory = fopen("memory.dat", "r+")))
-	{
-		memory = fopen("memory.dat", "w");
-		fclose(memory);
-		memory = fopen("memory.dat", "r+");
-	}
+	LPVOID freshMemorySector = HeapAlloc(GetProcessHeap(),
+					HEAP_GENERATE_EXCEPTIONS,
+					nFileSizeBytes/20);
+
+	FillMemory(freshMemorySector,
+		nFileSizeBytes/20,
+		0xFF);}
 
 }
 
 void ReadWord(int nAddress)
 {
-	FILE* memory;
-
-	if(!(memory = fopen("memory.dat", "r+")))
-	{
-		memory = fopen("memory.dat", "w");
-		fclose(memory);
-		memory = fopen("memory.dat", "r+");
-	}
+	HANDLE memory = CreateFile( "memory.dat",
+			GENERIC_WRITE,
+			0,
+			OPEN_ALWAYS,
+			FILE_ATTRIBUTE_NORMAL);}
 
 }
 
 void WriteWord(int nAddress, int nWord)
 {
-	FILE* memory;
-
-	if(!(memory = fopen("memory.dat", "r+")))
-	{
-		memory = fopen("memory.dat", "w");
-		fclose(memory);
-		memory = fopen("memory.dat", "r+");
-	}
+	HANDLE memory = CreateFile( "memory.dat",
+			GENERIC_WRITE,
+			0,
+			OPEN_ALWAYS,
+			FILE_ATTRIBUTE_NORMAL);}
 
 }
