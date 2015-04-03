@@ -1,3 +1,4 @@
+// Authors: Jacob Gatlin, Patrick Luckett, Joel Dawson, Jan Hellmich
 #include <windows.h>
 
 #define nFileSizeBytes 1310720
@@ -15,6 +16,7 @@ void EraseAllSectors()
 {
 	DWORD dwBytesWritten = 0;
 
+	// CreateFile is the recommended way of getting file handles, it doesn't actually create the file every time unless you tell it to.
 	HANDLE memory = CreateFile( "memory.bin",
 				(GENERIC_READ | GENERIC_WRITE),
 				0,
@@ -25,6 +27,7 @@ void EraseAllSectors()
 	
 	layerError = (GetLastError() == 0) ? fileNotFound : noError;
 
+	// We allocate a sector's worth of memory off the heap and fill it with ones.
 	LPVOID freshMemorySector = HeapAlloc(GetProcessHeap(),
 					HEAP_GENERATE_EXCEPTIONS,
 					nFileSizeBytes/20);
@@ -33,6 +36,7 @@ void EraseAllSectors()
 		nFileSizeBytes/20,
 		0xff);
 
+	// We write that block of memory 20 times.
 	for(int sect = 0; sect < 20; sect++){
 	
 		WriteFile( memory,
@@ -63,10 +67,24 @@ void EraseSector(int nSectorNr)
 				(GENERIC_READ | GENERIC_WRITE),
 				0,
 				NULL,
-				OPEN_ALWAYS,
+				OPEN_EXISTING,
 				FILE_ATTRIBUTE_NORMAL,
 				NULL);
 
+	if(GetLastError() == ERROR_FILE_NOT_FOUND) 
+	{
+		EraseAllSectors();
+
+		memory = CreateFile(  "memory.bin",
+				(GENERIC_READ | GENERIC_WRITE),
+				0,
+				NULL,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL);
+	}
+
+	// We allocate a sector's worth of memory and fill it with ones.
 	LPVOID freshMemorySector = HeapAlloc(GetProcessHeap(),
 					HEAP_GENERATE_EXCEPTIONS,
 					nFileSizeBytes/20);
@@ -75,6 +93,7 @@ void EraseSector(int nSectorNr)
 		nFileSizeBytes/20,
 		0xFF);
 	
+	// We write that block to the specified sector.
 	SetFilePointer(memory,
 			nSectorNr * nFileSizeBytes/20,
 			NULL,
@@ -104,13 +123,26 @@ UINT16 ReadWord(int nAddress)
 
 	DWORD dwBytesRead = 0;
 		
-	HANDLE memory = CreateFile( "memory.bin",
+	HANDLE memory = CreateFile(  "memory.bin",
 				(GENERIC_READ | GENERIC_WRITE),
 				0,
 				NULL,
-				OPEN_ALWAYS,
+				OPEN_EXISTING,
 				FILE_ATTRIBUTE_NORMAL,
 				NULL);
+
+	if(GetLastError() == ERROR_FILE_NOT_FOUND) 
+	{
+		EraseAllSectors();
+
+		memory = CreateFile(  "memory.bin",
+				(GENERIC_READ | GENERIC_WRITE),
+				0,
+				NULL,
+				OPEN_EXISTING,
+				FILE_ATTRIBUTE_NORMAL,
+				NULL);
+	}
 
 	SetFilePointer(memory,
 			nAddress,
@@ -140,15 +172,18 @@ void WriteWord(int nAddress, UINT16 nWord)
 
 	DWORD dwBytesWritten = 0;
 
+	// As specified, stored value is (currentValue & writeValue).
 	nWord = nWord & ReadWord(nAddress);
 
 	HANDLE memory = CreateFile( "memory.bin",
 				(GENERIC_READ | GENERIC_WRITE),
 				0,
 				NULL,
-				OPEN_ALWAYS,
+				OPEN_EXISTING,
 				FILE_ATTRIBUTE_NORMAL,
 				NULL);
+
+	// We don't need to test if the file exists because we just called ReadWord, which does.
 
 	SetFilePointer(memory,
 			nAddress,
