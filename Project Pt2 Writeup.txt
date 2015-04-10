@@ -1,0 +1,49 @@
+File System Components
+
+Main Memory Components:
+
+	FILE structure similar to Windows. Will be stored in a linked list of all open files.
+
+		filename: 64 bytes. null terminated string. Will identify file for opening, deleting, etc.
+
+		file pointer: 2 bytes. unsigned integer. location of read/write pointer in open file, as an offset from the first word.
+
+		Access types: 1 bit each identifying rb, wb, ab access types.
+
+		FAT entry location: 2 bytes. unsigned integer. Location of this file's FAT table entry as absolute address.
+		
+		filesize: 2 bytes. unsigned integer. file size in bytes, for fseek from end of file.
+		
+	FNODE. Node in a linked list of FILEs.
+	
+		FILE: as described above.
+		
+		FILE*: next file in list.
+		
+	HEADFILE. An FNODE pointer, head of linked list. If NULL, there are no open files.
+
+Secondary Memory Components:
+
+	Allocation block size: 1 KB
+
+	File allocation table. Each record contains a name, location of index block. Stored starting at location 0 in sector 0.
+	
+		filename: 64 byte null terminated string.
+
+		index block location: 3 bytes. unsigned integer. Locates index block for file as absolute address of block's starting word.
+		
+	Index Block. Contains starting address of each block assigned to the file, in order.
+	
+		block address: 2 bytes. unsigned integer. address of assigned block, local to this sector.
+
+	Free space allocation table. Each record is a starting address and length of a free portion of memory.
+	
+		free portion address: 3 bytes. unsigned integer. Locates the start of free portion as absolute address.
+		
+		length of portion: 1 byte. unsigned integer. Number of free blocks in portion.
+
+	Used (allocated then deallocated) space table. Enables cleanup/garbage collection. Similar structure to free space table.
+	
+		used portion address: 3 bytes. unsigned integer. Locates the start of used portion as an absolute address.
+		
+		length of portion: 1 byte. unsigned integer. Number of blocks in used portion.
