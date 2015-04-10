@@ -30,7 +30,7 @@ Secondary Memory Components:
 	
 		filename: 64 byte null terminated string.
 
-		index block location: 3 bytes. unsigned integer. Locates index block for file as absolute address of block's starting word.
+		index block location: 4 bytes. unsigned integer. Locates index block for file as absolute address of block's starting word.
 		
 	Index Block. Contains starting address of each block assigned to the file, in order.
 	
@@ -38,12 +38,12 @@ Secondary Memory Components:
 
 	Free space allocation table. Each record is a starting address and length of a free portion of memory.
 	
-		free portion address: 3 bytes. unsigned integer. Locates the start of free portion as absolute address.
+		free portion address: 4 bytes. unsigned integer. Locates the start of free portion as absolute address.
 		
-		length of portion: 1 byte. unsigned integer. Number of free blocks in portion.
+		length of portion: 2 byte. unsigned integer. Number of free blocks in portion.
 
 	Used (allocated then deallocated) space table. Enables cleanup/garbage collection. Similar structure to free space table.
 	
-		used portion address: 3 bytes. unsigned integer. Locates the start of used portion as an absolute address.
+		used portion address: 4 bytes. unsigned integer. Locates the start of used portion as an absolute address.
 		
-		length of portion: 1 byte. unsigned integer. Number of blocks in used portion.
+		length of portion: 2 byte. unsigned integer. Number of blocks in used portion.
