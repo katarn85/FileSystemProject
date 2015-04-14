@@ -1,0 +1,60 @@
+Pseudocode
+
+	fopen()
+	
+		If filename is already in open file list
+			return null, set error
+			
+		Verify that FAT is in memory by checking record 0 for FAT self-reference
+		
+		If FAT not in memory
+			call function to build FAT, FSAT, USAT
+			return null, set error
+			
+		Pull FAT index block
+		
+		Starting at record 3, first valid user file record
+			search for matching filename in record
+			
+		If record is found before the end of FAT
+			Build FILE structure for this file
+			Set filepointer to beginning of file
+			Set Acces type as specified by user
+			Add to open file list
+			Return FILE*
+			
+		Else
+			Append new record containing this filename to end of FAT
+			Allocate this file 1 index block and 1 data block from FSAT
+			Build FILE structure for this file
+			Return FILE*
+			
+	
+	fclose()
+	
+		If filename is in open file list
+			Flush changes if applicable
+			Remove FILE from list
+			Delete FILE structure
+			
+		Else
+			Return failure, set error
+			
+	fread()
+	
+		If filename is not in open file list
+			return failure, set error
+			
+		Verify that FAT is in memory
+		
+		Else construct and fail
+		
+		Go to specified file record, pull index block
+		
+		Starting at filepointer, read specified number of bytes and place in buffer
+		
+		If file ends before specified bytes, set error
+		
+		Return
+		
+	fwrite()
