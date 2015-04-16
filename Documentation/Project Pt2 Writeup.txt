@@ -8,11 +8,13 @@ Main Memory Components:
 
 		file pointer: 2 bytes. unsigned integer. location of read/write pointer in open file, as an offset from the first word.
 
-		Access types: 1 bit each identifying rb, wb, ab access types.
+		Access types: 1 byte each identifying rb, wb, ab access types.
 
-		FAT entry location: 2 bytes. unsigned integer. Location of this file's FAT table entry as absolute address.
+		file header location: 4 bytes. unsigned integer. Location of this file's headeras absolute address.
 		
 		filesize: 2 bytes. unsigned integer. file size in bytes, for fseek from end of file.
+
+		live copy pointer: LPVOID. point to in memory copy of file, for editing or reading.
 		
 	FNODE. Node in a linked list of FILEs.
 	
@@ -26,24 +28,85 @@ Secondary Memory Components:
 
 	Allocation block size: 1 KB
 
-	File allocation table. Each record contains a name, location of index block. Stored starting at location 0 in sector 0.
-	
-		filename: 64 byte null terminated string.
+	File/Portion Header. Structure is placed at the beginning of each file
+and open portion. Contains the following.
 
-		index block location: 4 bytes. unsigned integer. Locates index block for file as absolute address of block's starting word.
-		
-	Index Block. Contains starting address of each block assigned to the file, in order.
-	
-		block address: 2 bytes. unsigned integer. address of assigned block, local to this sector.
+		filename: 64 bytes null terminated string.
 
-	Free space allocation table. Each record is a starting address and length of a free portion of memory.
-	
-		free portion address: 4 bytes. unsigned integer. Locates the start of free portion as absolute address.
-		
-		length of portion: 2 byte. unsigned integer. Number of free blocks in portion.
+		portion type: 1 byte. Indicates free space, used space, allocated
+			file. Uses
 
-	Used (allocated then deallocated) space table. Enables cleanup/garbage collection. Similar structure to free space table.
+			free == 0xFF
+			allocated == 0x0F
+			used == 0x00
+
+		blocks: 1 byte. Number of allocated blocks for this portion.
+
+		length: 2 bytes. Filesize in words starting from the end of the
+			FILEHEADER structure. Used for loading file into main memory.
+
 	
-		used portion address: 4 bytes. unsigned integer. Locates the start of used portion as an absolute address.
-		
-		length of portion: 2 byte. unsigned integer. Number of blocks in used portion.
+Misc. Notes:
+
+	Initially, each sector is created as a free portion with a header at
+its starting word. Its portion type will be free. All other fields are unset.
+The only free portion in any sector will be at the end, since files will be
+allocated from the last spot. The final sector, 19, remains empty and
+unallocated for garbage collection.
+
+Control flow: fileOpen
+
+	first, check if the given filename is already in the open file list.
+If it is, return failure.
+
+	Create an FNODE structure for this file and set the filename and
+access type as given. 
+
+	Starting from location 0 in memory, traverse file headers in sector 1
+until: the filename matches & portion type is allocated, or until the free
+portion header is found, or until the next jump carries you into the next
+sector. If the last 2, start with the first location in the next sector.
+Continue until file is found or the free portion of sector 18 is found.
+
+	If the file is found, load the location of its header in the OpenFile
+structure. Load the file into main memory. Set the filepointer to the first
+byte in the loaded file instance.
+
+	Append the FNODE to the tail of the current list.
+
+
+
+Control flow: fileRead	
+
+	Check if given file was opened as rb. If not, return failure.
+
+	Check if size * count in bytes exceeds the distance from filepointer
+to end of file. If so, we will copy as many items from the file and return the
+read number of items. Otherwise, we copy the entire requested block into the
+buffer, then return the number of items read.
+
+Control flow: fwrite
+
+	Check if file is opened as wb or ab. If not, return failure.
+
+	If wb, leave file pointer as is. If ab, place fresh block size of
+write buffer onto struct and place file pointer at the beginning of that block.
+
+	Copy the given memory buffer into the fresh block. Update filesize.
+Reallocate space and move whole file into new memory. Deallocate old file and
+block. 
+
+
+Control flow: fclose
+
+	Check access type. For wb and ab, set old location to used and find a
+new allocation spot. If spot cannot be found, garbage collect and try again.
+When an large enough unallocated portion is found, write the new header to
+that location then follow it with the file. Remove open FNODE from list. If
+this was the last open file, garbage collect.
+
+Control flow: fseek
+
+	Check origin position. Calculate position of origin + offset. If
+position lies outside of the current file, return error. Else, change file
+pointer position.
