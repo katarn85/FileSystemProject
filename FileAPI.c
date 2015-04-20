@@ -144,20 +144,70 @@ int CSC322_fclose(CSC322FILE *stream)
 	return 0;
 }
 
-int CSC322_fread( LPVOID buffer,
-		int size,
-		int count,
-		CSC322FILE *stream)
+// Complete, not tested.
+int CSC322_fread(LPVOID buffer,
+		 int size,
+		 int count,
+		 CSC322FILE *stream)
 {
-	return 0;
+	if(buffer == NULL || stream->type == wb || stream->type == ab)
+		return 0;
+
+	int readLength = size * count;
+	int maxCount = ((char *)stream->inMemoryFile + filesize - (char *)stream->filepointer)/size;
+	int readCount = (maxCount > count) ? count : maxCount;
+
+	CopyMemory(buffer,
+		   stream->filepointer,
+		   size*readCount);
+
+	return readCount;
 }
 
+// Complete, not tested.
 int CSC322_fwrite(LPVOID buffer,
 		int size,
 		int count,
 		CSC322FILE *stream)
 {
-	return 0;
+	if(stream == NULL || stream->type == rb)
+	       return 0;
+
+	int writeLength = size * count;
+	int newsize = (char *)stream->filepointer + writeLength - (char *)stream->inMemoryFile;
+
+	if(newsize > stream->filesize)
+	{
+		LPVOID pBiggerFile = HeapAlloc(GetProcessHeap(),
+					       0,
+					       newsize);
+
+		CopyMemory(pBiggerFile,
+			   stream->inMemoryFile,
+			   stream->filesize);
+
+		LPVOID newFilePointer = (char *)pBiggerFile + ((char *)stream->filepointer - (char *)stream->inMemoryFile);
+
+		CopyMemory(newFilePointer,
+			   buffer,
+			   writeLength);
+
+		HeapFree(GetProcessHeap(),
+			 0,
+			 stream->inMemoryFile);
+
+		stream->inMemoryFile = pBiggerFile;
+		stream->filepointer = newFilePointer;
+		stream->filesize = newsize;
+	}
+	else
+	{
+		CopyMemory(stream->filepointer,
+			   buffer,
+			   writeLength);
+	}
+
+	return count;
 }
 
 // Complete, not tested.
