@@ -4,6 +4,8 @@
 #define PORTION_ALLOC = 0x0F
 #define PORTION_USED = 0x00
 
+#define EOF -1
+
 // **************************************** User API ****************************************
 
 // In progress
@@ -67,21 +69,63 @@ CSC322FILE *CSC322_fopen(const char *filename,
 		case wb:
 		case wpb:
 		case rb: requested->filepointer = requested->inMemoryFile; break;
-		case ab: requested->filepointer = (char *)requested->inMemoryFile + requested->filesize; break;
+		case ab: requested->filepointer = (char *)requested->inMemoryFile + requested->filesize - 1; break;
 		default: requested->filepointer = NULL; break;
 	}
 
 	return requested;
 }
 
-// Complete, not tested. Check on being passed old pointers, handle recursion on garbage collect. 
+// Complete, not tested. Check on being passed old pointers.
 int CSC322_fclose(CSC322FILE *stream)
 {
+	if(stream == NULL || stream == 0xFEEEFEEE)
+		return EOF;
+
 	if(!stream->modified)
 	{
 		closeNode(stream->filename);
 		return 0;
 	}
+
+	FILEHEADER searchHeader;
+	UINT32 searchLocation;
+	bool found = false, garbageCollected = false;
+
+	while(!garbageCollected)
+	{
+		searchLocation = 0;
+
+		while(thisSector(searchLocation) < 19)
+		{
+			readBuffer(&searchHeader,
+				   searchLocation,
+				   sizeof(FILEHEADER));
+
+			if(searchHeader.portionType == 0xFF && (thisSector(searchLocation) + 1)*nSectorSizeBytes - (searchLocation + sizeof(FILEHEADER)) >= stream->filesize)
+			{
+				found = true;
+				break;
+			}
+			else if(searchHeader.portionType == 0xFF)
+			{
+				searchLocation = (1 + thisSector(searchLocation))*nSectorSizeBytes;
+				continue;
+			}
+
+			searchLocation += sizeof(FILEHEADER) + searchHeader.nFileSizeWords*2;
+
+		}
+
+		if(!found)
+		{
+			garbageCollect();
+			garbageCollected = true;
+		}
+	}
+
+	if(!found)
+		return EOF;
 
 	FILEHEADER usedHeader;
 
@@ -95,36 +139,6 @@ int CSC322_fclose(CSC322FILE *stream)
 		    stream->headerLocation,
 		    sizeof(FILEHEADER));
 
-	FILEHEADER searchHeader;
-	UINT32 searchLocation = 0;
-	bool found = false;
-
-	while(thisSector(searchLocation) < 19)
-	{
-		readBuffer(&searchHeader,
-			   searchLocation,
-			   sizeof(FILEHEADER));
-
-		if(searchHeader.portionType == 0xFF && thisSector(searchLocation)*nSectorSizeBytes - (searchLocation + sizeof(FILEHEADER)) >= stream->filesize)
-		{
-			found = true;
-			break;
-		}
-		else if(searchHeader.portionType == 0xFF)
-		{
-			searchLocation = (1 + thisSector(searchLocation))*nSectorSizeBytes;
-			continue;
-		}
-
-		searchLocation += sizeof(FILEHEADER) + searchHeader.nFileSizeWords*2;
-
-	}
-
-	if(!found)
-	{
-		garbageCollect();
-		CSC322_fclose(stream);
-	}
 
 	strcpy(searchHeader.filename, stream->filename);
 
@@ -154,7 +168,7 @@ int CSC322_fread(LPVOID buffer,
 		return 0;
 
 	int readLength = size * count;
-	int maxCount = ((char *)stream->inMemoryFile + filesize - (char *)stream->filepointer)/size;
+	int maxCount = ((char *)stream->inMemoryFile + stream->filesize - (char *)stream->filepointer)/size;
 	int readCount = (maxCount > count) ? count : maxCount;
 
 	CopyMemory(buffer,
@@ -220,25 +234,25 @@ int CSC322_fseek(CSC322FILE *stream,
 		if(offset >= stream->filesize || offset < 0)
 			return 1;
 
-		(char *)stream->filepointer = (char *)stream->inMemoryFile + offset;
+		stream->filepointer = (char *)stream->inMemoryFile + offset;
 
 		return 0;
 	}
 	else if(origin == SEEK_END)
 	{
-		if(offset > 0 || filesize - offset < 0)
+		if(offset > 0 || stream->filesize + offset < 0)
 			return 1;
 
-		(char *)stream->filepointer = (char *)stream->inMemoryFile + (filesize - offset);
+		stream->filepointer = (char *)stream->inMemoryFile + (stream->filesize - offset);
 
 		return 0;
 	}
 	else if(origin == SEEK_CUR)
 	{
-		if((char *)stream->filepointer + offset > (char *)stream->inMemoryFile + filesize || (char *)stream->filepointer + offset < (char *)stream->inMemoryFile)
+		if((char *)stream->filepointer + offset > (char *)stream->inMemoryFile + stream->filesize || (char *)stream->filepointer + offset < (char *)stream->inMemoryFile)
 			return 1;
 
-		(char *)stream->filepointer += offset;
+		stream->filepointer = (char *)stream->filepointer + offset;
 
 		return 0;
 	}
