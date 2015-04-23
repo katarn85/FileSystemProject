@@ -12,6 +12,17 @@
 CSC322FILE *CSC322_fopen(const char *filename,
 		      const char *mode)
 {
+	FNODE *temp = head;
+	FNODE check;
+
+	while (temp != nullptr) {
+		check = *temp;
+		if (strcmp(check.file.filename, filename) == 0) {
+			return nullptr;
+		}
+		temp = check.next;
+	}
+	
 	// (PSEU)	
 	// Check if file is open
 	// Return Failure if so.
@@ -302,9 +313,19 @@ CSC322FILE* createFile(const char *filename,
 					     sizeof(FNODE));
 
 	*pFNODE = newFNODE;
-
+	
 	// (PSEU)
 	// Append to open file list
+	
+	FNODE *temp = head;
+	FNODE *base;
+
+	while (temp != nullptr) {
+		base = temp;
+		temp = base->next;
+	}
+
+	base->next = pFNODE;
 	
 	return &(pFNODE->file);
 }
